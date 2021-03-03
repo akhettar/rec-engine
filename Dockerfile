@@ -1,15 +1,16 @@
-#first stage - builder
-FROM golang:1.11.0-stretch as builder
-COPY . /LoadLocation
-WORKDIR /LoadLocation
+# build stage
+FROM golang:alpine AS build-env
+RUN apk --no-cache add build-base git gcc
 
-ENV GO111MODULE=on
-RUN CGO_ENABLED=0 GOOS=linux go build -o rec-engine
+# RUN go get github.com/swaggo/swag@v1.7.0
+# RUN go get github.com/go-openapi/jsonreference@v0.19.5
+# RUN go get github.com/swaggo/http-swagger@v1.0.0
 
-#second stage
-FROM alpine:latest
-WORKDIR /root/
-RUN apk add --no-cache tzdata
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=builder /rec-engine .
-CMD ["./rec-engine"]
+ADD . /src
+RUN cd /src && CGO_ENABLED=0 GOOS=linux go build -o rec-engine
+
+# final stage
+FROM alpine
+WORKDIR /app
+COPY --from=build-env /src/rec-engine /app/
+ENTRYPOINT ./rec-engine

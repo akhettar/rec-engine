@@ -1,0 +1,112 @@
+definitions:
+  model.ErrorMessage:
+    properties:
+      code:
+        type: integer
+      error:
+        type: string
+    type: object
+  model.Rate:
+    properties:
+      item:
+        type: string
+      score:
+        type: number
+      user:
+        type: string
+    type: object
+  model.Suggestion:
+    properties:
+      item:
+        type: string
+      score:
+        type: number
+    type: object
+info:
+  contact: {}
+paths:
+  /api/probability/{user}/{item}:
+    get:
+      description: Gets probability for a given user and item
+      operationId: get-probability
+      parameters:
+      - description: user ID
+        in: path
+        name: user
+        required: true
+        type: string
+      - description: item ID
+        in: path
+        name: item
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Suggestion returned
+          schema:
+            $ref: '#/definitions/model.Suggestion'
+        "400":
+          description: Invalid payload
+          schema:
+            $ref: '#/definitions/model.ErrorMessage'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorMessage'
+      summary: Get probability
+  /api/rate:
+    post:
+      description: Adds rating for a given user with an item
+      operationId: post-rate
+      parameters:
+      - description: body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.Rate'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Rating created
+          schema:
+            $ref: '#/definitions/model.Rate'
+        "400":
+          description: Invalid payload
+          schema:
+            $ref: '#/definitions/model.ErrorMessage'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorMessage'
+      summary: Create rating for a gien user with an item
+  /api/suggestion/{user}:
+    get:
+      description: Gets suggestions for a given user
+      operationId: get-suggestions
+      parameters:
+      - description: user ID
+        in: path
+        name: user
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Suggestion returned
+          schema:
+            $ref: '#/definitions/model.Suggestion'
+        "400":
+          description: Invalid payload
+          schema:
+            $ref: '#/definitions/model.ErrorMessage'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorMessage'
+      summary: Get suggestions
+swagger: "2.0"

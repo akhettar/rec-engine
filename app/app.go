@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
+	_ "github.com/akhettar/rec-engine/docs"
 	m "github.com/akhettar/rec-engine/model"
 	"github.com/akhettar/rec-engine/redrec"
-	"github.com/akhettar/rec-engine/utils"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 // App server instance type
@@ -40,16 +42,26 @@ func (a *App) initialiseRoutes() {
 	a.router.HandleFunc("/api/rate", a.rate).Methods(http.MethodPost)
 	a.router.HandleFunc("/api/suggestion/{user}", a.suggest).Methods(http.MethodGet)
 	a.router.HandleFunc("/api/probability/{user}/{item}", a.itemProbability).Methods(http.MethodGet)
+	a.router.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
 }
 
+// @Summary Create rating for a gien user with an item
+// @ID post-rate
+// @Description Adds rating for a given user with an item
+// @Produce json
+// @Param body body model.Rate true "body"
+// @Success 201 {object} model.Rate "Rating created"
+// @Failure 400 {object} model.ErrorMessage "Invalid payload"
+// @Failure 500 {object} model.ErrorMessage "Internal server error"
+// @Router /api/rate [post]
 func (a *App) rate(rw http.ResponseWriter, r *http.Request) {
 	var req m.Rate
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		utils.RespondWithError(rw, http.StatusBadRequest, fmt.Sprintf("Failed to desrialise the payload: %s", err))
+		respondWithError(rw, http.StatusBadRequest, fmt.Sprintf("Failed to desrialise the payload: %s", err))
 		return
 	}
 	if err := a.eng.Rate(req.Item, req.User, req.Score); err != nil {
-		utils.RespondWithError(rw, http.StatusInternalServerError, err.Error())
+		respondWithError(rw, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -58,11 +70,19 @@ func (a *App) rate(rw http.ResponseWriter, r *http.Request) {
 		log.Warnf("failed to update DB with erro %s", err)
 	}
 
-	msg := fmt.Sprintf("User %s ranked item %s with %f", req.User, req.Item, req.Score)
-	rw.WriteHeader(http.StatusCreated)
-	rw.Write([]byte(msg))
+	log.Infof("User %s ranked item %s with %f", req.User, req.Item, req.Score)
+	respondWithJSON(rw, http.StatusCreated, req)
 }
 
+// @Summary Get suggestions
+// @ID get-suggestions
+// @Description Gets suggestions for a given user
+// @Produce json
+// @Param user path string true "user ID"
+// @Success 200 {object} model.Suggestion "Suggestion returned"
+// @Failure 400 {object} model.ErrorMessage "Invalid payload"
+// @Failure 500 {object} model.ErrorMessage "Internal server error"
+// @Router /api/suggestion/{user} [get]
 func (a *App) suggest(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	user := vars["user"]
@@ -70,7 +90,7 @@ func (a *App) suggest(rw http.ResponseWriter, r *http.Request) {
 
 	// 1. Update suggested items
 	if err := a.eng.UpdateSuggestedItems(user, 10000); err != nil {
-		utils.RespondWithError(rw, http.StatusInternalServerError, err.Error())
+		respondWithError(rw, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -78,13 +98,23 @@ func (a *App) suggest(rw http.ResponseWriter, r *http.Request) {
 	results, err := a.eng.GetUserSuggestions(user, 10000)
 
 	if err != nil {
-		utils.RespondWithError(rw, http.StatusInternalServerError, err.Error())
+		respondWithError(rw, http.StatusInternalServerError, err.Error())
 		return
 	}
 	log.Infof("Got results: %v", results)
-	utils.RespondWithJSON(rw, http.StatusOK, utils.ConvertToSuggestion(results))
+	respondWithJSON(rw, http.StatusOK, convertToSuggestion(results))
 }
 
+// @Summary Get probability
+// @ID get-probability
+// @Description Gets probability for a given user and item
+// @Produce json
+// @Param user path string true "user ID"
+// @Param item path string true "item ID"
+// @Success 200 {object} model.Suggestion "Suggestion returned"
+// @Failure 400 {object} model.ErrorMessage "Invalid payload"
+// @Failure 500 {object} model.ErrorMessage "Internal server error"
+// @Router /api/probability/{user}/{item} [get]
 func (a *App) itemProbability(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	user := vars["user"]
@@ -94,10 +124,44 @@ func (a *App) itemProbability(rw http.ResponseWriter, r *http.Request) {
 	result, err := a.eng.CalcItemProbability(user, item)
 
 	if err != nil {
-		utils.RespondWithError(rw, http.StatusInternalServerError, err.Error())
+		respondWithError(rw, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	log.Infof("Got results: %v", m.ItemProbability{user, item, result})
-	utils.RespondWithJSON(rw, http.StatusOK, m.ItemProbability{user, item, result})
+	respondWithJSON(rw, http.StatusOK, m.ItemProbability{user, item, result})
+}
+
+// respondWithError return json error
+func respondWithError(rw http.ResponseWriter, code int, msg string) {
+	respondWithJSON(rw, 400, m.ErrorMessage{msg, code})
+}
+
+// respondWithJSON returns json response
+func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
+	json, _ := json.Marshal(payload)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	w.Write(json)
+}
+
+// convertToSuggestion convert to an array of Suggestion
+func convertToSuggestion(results []string) []m.Suggestion {
+	var item string
+	var suggestions []m.Suggestion
+	for index, res := range results {
+		if index%2 == 0 {
+			item = res
+		} else {
+			score, _ := strconv.ParseFloat(res, 64)
+			suggestions = append(suggestions, m.Suggestion{item, score})
+		}
+	}
+	return suggestions
+}
+
+// convertToItemProbability convert an array of result to ItemProbability
+func convertToItemProbability(results []string) m.ItemProbability {
+	propability, _ := strconv.ParseFloat(results[2], 64)
+	return m.ItemProbability{User: results[0], Item: results[1], Probability: propability}
 }

@@ -1,0 +1,172 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "contact": {}
+    },
+    "paths": {
+        "/api/probability/{user}/{item}": {
+            "get": {
+                "description": "Gets probability for a given user and item",
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Get probability",
+                "operationId": "get-probability",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "user ID",
+                        "name": "user",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "item ID",
+                        "name": "item",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Suggestion returned",
+                        "schema": {
+                            "$ref": "#/definitions/model.Suggestion"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid payload",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorMessage"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorMessage"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/rate": {
+            "post": {
+                "description": "Adds rating for a given user with an item",
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Create rating for a gien user with an item",
+                "operationId": "post-rate",
+                "parameters": [
+                    {
+                        "description": "body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.Rate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Rating created",
+                        "schema": {
+                            "$ref": "#/definitions/model.Rate"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid payload",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorMessage"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorMessage"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/suggestion/{user}": {
+            "get": {
+                "description": "Gets suggestions for a given user",
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Get suggestions",
+                "operationId": "get-suggestions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "user ID",
+                        "name": "user",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Suggestion returned",
+                        "schema": {
+                            "$ref": "#/definitions/model.Suggestion"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid payload",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorMessage"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorMessage"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "model.ErrorMessage": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.Rate": {
+            "type": "object",
+            "properties": {
+                "item": {
+                    "type": "string"
+                },
+                "score": {
+                    "type": "number"
+                },
+                "user": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.Suggestion": {
+            "type": "object",
+            "properties": {
+                "item": {
+                    "type": "string"
+                },
+                "score": {
+                    "type": "number"
+                }
+            }
+        }
+    }
+}

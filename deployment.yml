@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rec-engine-deployment
+  labels:
+    app: rec-engine
+spec:
+  selector:
+    matchLabels:
+      app: rec-engine
+  template:
+    metadata:
+      labels:
+        app: rec-engine
+    spec:
+      containers:
+      - name: rec-engine-container
+        image: ayache/rec-engine:1.0.0
+        ports:
+        - containerPort: 3000
+        env:
+          - name: REDIS_URL
+            value: redis://35.234.119.178:6379

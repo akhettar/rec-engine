@@ -1,12 +1,23 @@
 package main
 
 import (
-	log "github.com/sirupsen/logrus"
+	"os"
+
 	"github.com/akhettar/rec-engine/app"
+	log "github.com/sirupsen/logrus"
 )
 
+var redisURL string
+
+func init() {
+	if url, ok := os.LookupEnv("REDIS_URL"); !ok {
+		redisURL = "redis://localhost:6379"
+	} else {
+		redisURL = url
+	}
+}
+
 func main() {
-	
 	log.Info("starting the server on 3000")
-	app.InitialiseApp("redis://34.66.203.46:6379").Run(":3000")
+	app.InitialiseApp(redisURL).Run(":3000")
 }
