@@ -6,7 +6,7 @@ spec:
   selector:
     app: rec-engine
   ports:
-    - port: 8765
+    - port: 9000
       targetPort: 3000
   type: LoadBalancer
 

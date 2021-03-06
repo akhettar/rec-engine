@@ -15,9 +15,9 @@ spec:
     spec:
       containers:
       - name: rec-engine-container
-        image: ayache/rec-engine:1.0.0
+        image: ayache/rec-engine:1.0.1
         ports:
         - containerPort: 3000
         env:
           - name: REDIS_URL
-            value: redis://35.234.119.178:6379
+            value: redis://some-redis-6379

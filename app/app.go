@@ -11,7 +11,7 @@ import (
 	"github.com/akhettar/rec-engine/redrec"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
-	httpSwagger "github.com/swaggo/http-swagger"
+	httpswag "github.com/swaggo/http-swagger"
 )
 
 // App server instance type
@@ -42,7 +42,7 @@ func (a *App) initialiseRoutes() {
 	a.router.HandleFunc("/api/rate", a.rate).Methods(http.MethodPost)
 	a.router.HandleFunc("/api/suggestion/{user}", a.suggest).Methods(http.MethodGet)
 	a.router.HandleFunc("/api/probability/{user}/{item}", a.itemProbability).Methods(http.MethodGet)
-	a.router.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
+	a.router.PathPrefix("/swagger/").Handler(httpswag.WrapHandler)
 }
 
 // @Summary Create rating for a gien user with an item
