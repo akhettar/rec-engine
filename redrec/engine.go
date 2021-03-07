@@ -98,10 +98,17 @@ func (rr *Redrec) BatchUpdateSimilarUsers(max int) error {
 // the calculated probability for each item in a sorted set
 func (rr *Redrec) UpdateSuggestedItems(user string, max int) error {
 	items, err := rr.getSuggestCandidates(user, max)
+
+	// there are no suggestion candidate, abort updates
+	if len(items) == 0 {
+		return nil
+	}
+
+	// reset the maxumim number of suggestions to the possible value
 	if max > len(items) {
 		max = len(items)
 	}
-
+	
 	args := []interface{}{}
 	args = append(args, fmt.Sprintf("user:%s:suggestions", user))
 	for _, item := range items {

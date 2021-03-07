@@ -5,20 +5,13 @@ import (
 	"testing"
 )
 
-var rr *Redrec
 var err error
 var max = 100
 
-func TestNew(t *testing.T) {
-	rr, err = New("redis://localhost:6379")
-	if err != nil {
-		t.Error("Redis init Error", err)
-	}
-}
 
 func TestRate(t *testing.T) {
-	err := rr.Rate("item1", "user1", 0.4)
-	if err != nil {
+
+	if err = rr.Rate("item1", "user1", 0.4); err != nil {
 		t.Error("Rate Error", err)
 	}
 

@@ -40,8 +40,8 @@ func (a *App) Run(addr string) {
 
 func (a *App) initialiseRoutes() {
 	a.router.HandleFunc("/api/rate", a.rate).Methods(http.MethodPost)
-	a.router.HandleFunc("/api/suggestion/{user}", a.suggest).Methods(http.MethodGet)
-	a.router.HandleFunc("/api/probability/{user}/{item}", a.itemProbability).Methods(http.MethodGet)
+	a.router.HandleFunc("/api/recommendation/user/{user}", a.recommend).Methods(http.MethodGet)
+	a.router.HandleFunc("/api/probability/user/{user}/item/{item}", a.itemProbability).Methods(http.MethodGet)
 	a.router.PathPrefix("/swagger/").Handler(httpswag.WrapHandler)
 }
 
@@ -82,8 +82,8 @@ func (a *App) rate(rw http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} model.Suggestion "Suggestion returned"
 // @Failure 400 {object} model.ErrorMessage "Invalid payload"
 // @Failure 500 {object} model.ErrorMessage "Internal server error"
-// @Router /api/suggestion/{user} [get]
-func (a *App) suggest(rw http.ResponseWriter, r *http.Request) {
+// @Router /api/recommendation/{user} [get]
+func (a *App) recommend(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	user := vars["user"]
 	log.WithFields(log.Fields{"User": user}).Info("Received request to retrienve suggestion for user")
@@ -102,7 +102,7 @@ func (a *App) suggest(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Infof("Got results: %v", results)
-	respondWithJSON(rw, http.StatusOK, convertToSuggestion(results))
+	respondWithJSON(rw, http.StatusOK, convertToRecommendations(user, results))
 }
 
 // @Summary Get probability
@@ -128,13 +128,13 @@ func (a *App) itemProbability(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Infof("Got results: %v", m.ItemProbability{user, item, result})
-	respondWithJSON(rw, http.StatusOK, m.ItemProbability{user, item, result})
+	log.Infof("Got results: %v", m.ItemProbability{User: user, Item: item, Probability: result})
+	respondWithJSON(rw, http.StatusOK, m.ItemProbability{User: user, Item: item, Probability: result})
 }
 
 // respondWithError return json error
 func respondWithError(rw http.ResponseWriter, code int, msg string) {
-	respondWithJSON(rw, 400, m.ErrorMessage{msg, code})
+	respondWithJSON(rw, 400, m.ErrResponse{Error: msg, Code: code})
 }
 
 // respondWithJSON returns json response
@@ -145,19 +145,19 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	w.Write(json)
 }
 
-// convertToSuggestion convert to an array of Suggestion
-func convertToSuggestion(results []string) []m.Suggestion {
+// convertToRecommendations convert to an array of Suggestion
+func convertToRecommendations(user string, results []string) m.Recommendations{
 	var item string
-	var suggestions []m.Suggestion
+	recs := make([]m.Recommendation, len(results), len(results))
 	for index, res := range results {
 		if index%2 == 0 {
 			item = res
 		} else {
 			score, _ := strconv.ParseFloat(res, 64)
-			suggestions = append(suggestions, m.Suggestion{item, score})
+			recs = append(recs, m.Recommendation{Item: item, Score: score})
 		}
 	}
-	return suggestions
+	return m.Recommendations{User: user, Data: recs}
 }
 
 // convertToItemProbability convert an array of result to ItemProbability

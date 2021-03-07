@@ -1,6 +1,8 @@
 # build stage
 FROM golang:stretch AS build-env
 
+RUN go version
+
 ADD . /src
 RUN cd /src && CGO_ENABLED=0 GOOS=linux go build -o rec-engine
 
