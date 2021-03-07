@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	_ "github.com/akhettar/rec-engine/docs"
+	"github.com/akhettar/rec-engine/model"
 	m "github.com/akhettar/rec-engine/model"
 	"github.com/akhettar/rec-engine/redrec"
 	"github.com/gorilla/mux"
@@ -41,6 +42,7 @@ func (a *App) Run(addr string) {
 func (a *App) initialiseRoutes() {
 	a.router.HandleFunc("/api/rate", a.rate).Methods(http.MethodPost)
 	a.router.HandleFunc("/api/recommendation/user/{user}", a.recommend).Methods(http.MethodGet)
+	a.router.HandleFunc("/api/items/user/{user}", a.userItems).Methods(http.MethodGet)
 	a.router.HandleFunc("/api/probability/user/{user}/item/{item}", a.itemProbability).Methods(http.MethodGet)
 	a.router.PathPrefix("/swagger/").Handler(httpswag.WrapHandler)
 }
@@ -65,11 +67,6 @@ func (a *App) rate(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// update DB
-	if err := a.eng.BatchUpdateSimilarUsers(10000); err != nil {
-		log.Warnf("failed to update DB with erro %s", err)
-	}
-
 	log.Infof("User %s ranked item %s with %f", req.User, req.Item, req.Score)
 	respondWithJSON(rw, http.StatusCreated, req)
 }
@@ -88,7 +85,12 @@ func (a *App) recommend(rw http.ResponseWriter, r *http.Request) {
 	user := vars["user"]
 	log.WithFields(log.Fields{"User": user}).Info("Received request to retrienve suggestion for user")
 
-	// 1. Update suggested items
+	// 1. batch upddate DB
+	if err := a.eng.BatchUpdateSimilarUsers(10000); err != nil {
+		log.Warnf("failed to update DB with erro %s", err)
+	}
+
+	// 2. Update suggested items
 	if err := a.eng.UpdateSuggestedItems(user, 10000); err != nil {
 		respondWithError(rw, http.StatusInternalServerError, err.Error())
 		return
@@ -132,6 +134,31 @@ func (a *App) itemProbability(rw http.ResponseWriter, r *http.Request) {
 	respondWithJSON(rw, http.StatusOK, m.ItemProbability{User: user, Item: item, Probability: result})
 }
 
+// @Summary Get User Items
+// @ID get-user-item
+// @Description Gets user items
+// @Produce json
+// @Param user path string true "user ID"
+// @Success 200 {object} model.Suggestion "Suggestion returned"
+// @Failure 400 {object} model.ErrorMessage "Invalid payload"
+// @Failure 500 {object} model.ErrorMessage "Internal server error"
+// @Router /api/iems/user/{user} [get]
+func (a *App) userItems(rw http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	user := vars["user"]
+	log.WithFields(log.Fields{"User": user}).Info("Received request to calculate item probability of given user")
+
+	result, err := a.eng.GetUserItems(user, 10000)
+
+	if err != nil {
+		respondWithError(rw, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	log.Infof("Got results: %v", result)
+	respondWithJSON(rw, http.StatusOK, convertToUserIterms(user, result))
+}
+
 // respondWithError return json error
 func respondWithError(rw http.ResponseWriter, code int, msg string) {
 	respondWithJSON(rw, 400, m.ErrResponse{Error: msg, Code: code})
@@ -146,9 +173,9 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 }
 
 // convertToRecommendations convert to an array of Suggestion
-func convertToRecommendations(user string, results []string) m.Recommendations{
+func convertToRecommendations(user string, results []string) m.Recommendations {
 	var item string
-	recs := make([]m.Recommendation, len(results), len(results))
+	recs := []model.Recommendation{}
 	for index, res := range results {
 		if index%2 == 0 {
 			item = res
@@ -158,6 +185,21 @@ func convertToRecommendations(user string, results []string) m.Recommendations{
 		}
 	}
 	return m.Recommendations{User: user, Data: recs}
+}
+
+// convertToRecommendations convert to an array of Suggestion
+func convertToUserIterms(user string, results []string) m.Items {
+	var item string
+	recs := []model.Item{}
+	for index, res := range results {
+		if index%2 == 0 {
+			item = res
+		} else {
+			score, _ := strconv.ParseFloat(res, 64)
+			recs = append(recs, m.Item{Name: item, Score: score})
+		}
+	}
+	return m.Items{User: user, Data: recs}
 }
 
 // convertToItemProbability convert an array of result to ItemProbability

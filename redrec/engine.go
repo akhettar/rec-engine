@@ -5,6 +5,8 @@ import (
 	"math"
 	"strconv"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/gomodule/redigo/redis"
 )
 
@@ -86,7 +88,7 @@ func (rr *Redrec) BatchUpdateSimilarUsers(max int) error {
 
 		_, err = rr.rconn.Do("ZADD", args...)
 		if err != nil {
-			fmt.Println("ZADD ERR: ", err)
+			log.Warnf("ZADD ERR: %v", err)
 			return err
 		}
 	}
@@ -108,7 +110,7 @@ func (rr *Redrec) UpdateSuggestedItems(user string, max int) error {
 	if max > len(items) {
 		max = len(items)
 	}
-	
+
 	args := []interface{}{}
 	args = append(args, fmt.Sprintf("user:%s:suggestions", user))
 	for _, item := range items {
@@ -119,7 +121,7 @@ func (rr *Redrec) UpdateSuggestedItems(user string, max int) error {
 
 	_, err = rr.rconn.Do("ZADD", args...)
 	if err != nil {
-		fmt.Println("ZADD ERR: ", err)
+		log.Println("ZADD ERR: ", err)
 		return err
 	}
 
@@ -155,7 +157,7 @@ func (rr *Redrec) CalcItemProbability(user string, item string) (float64, error)
 	return score, nil
 }
 
-func (rr *Redrec) getUserItems(user string, max int) ([]string, error) {
+func (rr *Redrec) GetUserItems(user string, max int) ([]string, error) {
 	items, err := redis.Strings(rr.rconn.Do("ZREVRANGE", fmt.Sprintf("user:%s:items", user), 0, max))
 	if err != nil {
 		return nil, err
@@ -174,7 +176,7 @@ func (rr *Redrec) getItemScores(item string, max int) (map[string]string, error)
 }
 
 func (rr *Redrec) getSimilarityCandidates(user string, max int) ([]string, error) {
-	items, err := rr.getUserItems(user, max)
+	items, err := rr.GetUserItems(user, max)
 	if max > len(items) {
 		max = len(items)
 	}

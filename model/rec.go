@@ -15,8 +15,20 @@ type Recommendation struct {
 
 // Recommendations type
 type Recommendations struct {
+	User string           `json:"user"`
+	Data []Recommendation `json:"data"`
+}
+
+// Item user item
+type Item struct {
+	Name  string  `json:"item"`
+	Score float64 `json:"score"`
+}
+
+// Items list of item
+type Items struct {
 	User string `json:"user"`
-	Data [] Recommendation `json:"data"`
+	Data []Item `json:"data"`
 }
 
 // ItemProbability item probability
