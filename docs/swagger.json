@@ -4,23 +4,14 @@
         "contact": {}
     },
     "paths": {
-        "/api/iems/user/{user}": {
+        "/api/items": {
             "get": {
-                "description": "Gets user items",
+                "description": "Gets the most popular items",
                 "produces": [
                     "application/json"
                 ],
-                "summary": "Get User Items",
-                "operationId": "get-user-item",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "user ID",
-                        "name": "user",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
+                "summary": "Get most popular items",
+                "operationId": "get-popular-items",
                 "responses": {
                     "200": {
                         "description": "Items returned",
@@ -43,14 +34,23 @@
                 }
             }
         },
-        "/api/items": {
+        "/api/items/user/{user}": {
             "get": {
-                "description": "Gets the most popular items",
+                "description": "Gets user items",
                 "produces": [
                     "application/json"
                 ],
-                "summary": "Get most popular items",
-                "operationId": "get-popular-items",
+                "summary": "Get User Items",
+                "operationId": "get-user-item",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "user ID",
+                        "name": "user",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Items returned",

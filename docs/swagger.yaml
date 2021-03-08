@@ -59,7 +59,27 @@ definitions:
 info:
   contact: {}
 paths:
-  /api/iems/user/{user}:
+  /api/items:
+    get:
+      description: Gets the most popular items
+      operationId: get-popular-items
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Items returned
+          schema:
+            $ref: '#/definitions/model.Items'
+        "400":
+          description: Invalid payload
+          schema:
+            $ref: '#/definitions/model.ErrResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrResponse'
+      summary: Get most popular items
+  /api/items/user/{user}:
     get:
       description: Gets user items
       operationId: get-user-item
@@ -85,26 +105,6 @@ paths:
           schema:
             $ref: '#/definitions/model.ErrResponse'
       summary: Get User Items
-  /api/items:
-    get:
-      description: Gets the most popular items
-      operationId: get-popular-items
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Items returned
-          schema:
-            $ref: '#/definitions/model.Items'
-        "400":
-          description: Invalid payload
-          schema:
-            $ref: '#/definitions/model.ErrResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/model.ErrResponse'
-      summary: Get most popular items
   /api/probability/user/{user}/item/{item}:
     get:
       description: Gets probability for a given user and item
