@@ -25,6 +25,11 @@ type Item struct {
 	Score float64 `json:"score"`
 }
 
+// PopularItems response
+type PopularItems struct {
+	Data []Item `json:"data"`
+}
+
 // Items list of item
 type Items struct {
 	User string `json:"user"`

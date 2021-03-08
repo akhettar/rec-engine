@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: rec-engine-container
-        image: ayache/rec-engine:1.0.1
+        image: ayache/rec-engine:1.0.3
         ports:
         - containerPort: 3000
         env:

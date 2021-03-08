@@ -1,9 +1,34 @@
 definitions:
-  model.ErrorMessage:
+  model.ErrResponse:
     properties:
       code:
         type: integer
       error:
+        type: string
+    type: object
+  model.Item:
+    properties:
+      item:
+        type: string
+      score:
+        type: number
+    type: object
+  model.ItemProbability:
+    properties:
+      item:
+        type: string
+      propability:
+        type: number
+      user:
+        type: string
+    type: object
+  model.Items:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.Item'
+        type: array
+      user:
         type: string
     type: object
   model.Rate:
@@ -15,17 +40,72 @@ definitions:
       user:
         type: string
     type: object
-  model.Suggestion:
+  model.Recommendation:
     properties:
       item:
         type: string
       score:
         type: number
     type: object
+  model.Recommendations:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.Recommendation'
+        type: array
+      user:
+        type: string
+    type: object
 info:
   contact: {}
 paths:
-  /api/probability/{user}/{item}:
+  /api/iems/user/{user}:
+    get:
+      description: Gets user items
+      operationId: get-user-item
+      parameters:
+      - description: user ID
+        in: path
+        name: user
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Items returned
+          schema:
+            $ref: '#/definitions/model.Items'
+        "400":
+          description: Invalid payload
+          schema:
+            $ref: '#/definitions/model.ErrResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrResponse'
+      summary: Get User Items
+  /api/items:
+    get:
+      description: Gets the most popular items
+      operationId: get-popular-items
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Items returned
+          schema:
+            $ref: '#/definitions/model.Items'
+        "400":
+          description: Invalid payload
+          schema:
+            $ref: '#/definitions/model.ErrResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrResponse'
+      summary: Get most popular items
+  /api/probability/user/{user}/item/{item}:
     get:
       description: Gets probability for a given user and item
       operationId: get-probability
@@ -44,17 +124,17 @@ paths:
       - application/json
       responses:
         "200":
-          description: Suggestion returned
+          description: ItemProbability returned
           schema:
-            $ref: '#/definitions/model.Suggestion'
+            $ref: '#/definitions/model.ItemProbability'
         "400":
           description: Invalid payload
           schema:
-            $ref: '#/definitions/model.ErrorMessage'
+            $ref: '#/definitions/model.ErrResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/model.ErrorMessage'
+            $ref: '#/definitions/model.ErrResponse'
       summary: Get probability
   /api/rate:
     post:
@@ -77,16 +157,16 @@ paths:
         "400":
           description: Invalid payload
           schema:
-            $ref: '#/definitions/model.ErrorMessage'
+            $ref: '#/definitions/model.ErrResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/model.ErrorMessage'
+            $ref: '#/definitions/model.ErrResponse'
       summary: Create rating for a gien user with an item
-  /api/suggestion/{user}:
+  /api/recommendation/user/{user}:
     get:
-      description: Gets suggestions for a given user
-      operationId: get-suggestions
+      description: Gets recommendations for a given user
+      operationId: get-recommendations
       parameters:
       - description: user ID
         in: path
@@ -97,16 +177,16 @@ paths:
       - application/json
       responses:
         "200":
-          description: Suggestion returned
+          description: Recommendation returned
           schema:
-            $ref: '#/definitions/model.Suggestion'
+            $ref: '#/definitions/model.Recommendations'
         "400":
           description: Invalid payload
           schema:
-            $ref: '#/definitions/model.ErrorMessage'
+            $ref: '#/definitions/model.ErrResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/model.ErrorMessage'
-      summary: Get suggestions
+            $ref: '#/definitions/model.ErrResponse'
+      summary: Get recommendations
 swagger: "2.0"

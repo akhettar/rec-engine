@@ -37,21 +37,25 @@ func (rr *Redrec) CloseConn() {
 
 // Rate adds user->score to a given item
 func (rr *Redrec) Rate(item string, user string, score float64) error {
-	_, err := rr.rconn.Do("ZADD", fmt.Sprintf("user:%s:items", user), score, item)
-	if err != nil {
+	if _, err := rr.rconn.Do("ZADD", fmt.Sprintf("user:%s:items", user), score, item); err != nil {
 		return err
 	}
 
-	_, err = rr.rconn.Do("ZADD", fmt.Sprintf("item:%s:scores", item), score, user)
-	if err != nil {
+	if _, err := rr.rconn.Do("ZADD", fmt.Sprintf("item:%s:scores", item), score, user); err != nil {
 		return err
 	}
 
-	_, err = rr.rconn.Do("SADD", "users", user)
-	if err != nil {
-		return err
+	if _, err := rr.rconn.Do("ZINCRBY", fmt.Sprintf("items"), 1, item); err != nil {
+		log.Warnf("failed to store item: %s in the items list", item)
 	}
 
+	if err := rr.BatchUpdateSimilarUsers(100000); err != nil {
+		log.Warnf("failed to update DB with error %v", err)
+	}
+
+	if _, err := rr.rconn.Do("SADD", "users", user); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -157,12 +161,23 @@ func (rr *Redrec) CalcItemProbability(user string, item string) (float64, error)
 	return score, nil
 }
 
+// GetUserItems gets all items for a given user
 func (rr *Redrec) GetUserItems(user string, max int) ([]string, error) {
 	items, err := redis.Strings(rr.rconn.Do("ZREVRANGE", fmt.Sprintf("user:%s:items", user), 0, max))
 	if err != nil {
 		return nil, err
 	}
 
+	return items, nil
+}
+
+// GetPopularItems return the existing user
+//suggestions range for a given user as a []string
+func (rr *Redrec) GetPopularItems(max int) ([]string, error) {
+	items, err := redis.Strings(rr.rconn.Do("ZREVRANGE", "items", 0, max, "WITHSCORES"))
+	if err != nil {
+		return nil, err
+	}
 	return items, nil
 }
 

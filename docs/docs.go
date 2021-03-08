@@ -24,7 +24,76 @@ var doc = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api/probability/{user}/{item}": {
+        "/api/iems/user/{user}": {
+            "get": {
+                "description": "Gets user items",
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Get User Items",
+                "operationId": "get-user-item",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "user ID",
+                        "name": "user",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Items returned",
+                        "schema": {
+                            "$ref": "#/definitions/model.Items"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid payload",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/items": {
+            "get": {
+                "description": "Gets the most popular items",
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Get most popular items",
+                "operationId": "get-popular-items",
+                "responses": {
+                    "200": {
+                        "description": "Items returned",
+                        "schema": {
+                            "$ref": "#/definitions/model.Items"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid payload",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/probability/user/{user}/item/{item}": {
             "get": {
                 "description": "Gets probability for a given user and item",
                 "produces": [
@@ -50,21 +119,21 @@ var doc = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Suggestion returned",
+                        "description": "ItemProbability returned",
                         "schema": {
-                            "$ref": "#/definitions/model.Suggestion"
+                            "$ref": "#/definitions/model.ItemProbability"
                         }
                     },
                     "400": {
                         "description": "Invalid payload",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorMessage"
+                            "$ref": "#/definitions/model.ErrResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorMessage"
+                            "$ref": "#/definitions/model.ErrResponse"
                         }
                     }
                 }
@@ -99,26 +168,26 @@ var doc = `{
                     "400": {
                         "description": "Invalid payload",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorMessage"
+                            "$ref": "#/definitions/model.ErrResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorMessage"
+                            "$ref": "#/definitions/model.ErrResponse"
                         }
                     }
                 }
             }
         },
-        "/api/suggestion/{user}": {
+        "/api/recommendation/user/{user}": {
             "get": {
-                "description": "Gets suggestions for a given user",
+                "description": "Gets recommendations for a given user",
                 "produces": [
                     "application/json"
                 ],
-                "summary": "Get suggestions",
-                "operationId": "get-suggestions",
+                "summary": "Get recommendations",
+                "operationId": "get-recommendations",
                 "parameters": [
                     {
                         "type": "string",
@@ -130,21 +199,21 @@ var doc = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Suggestion returned",
+                        "description": "Recommendation returned",
                         "schema": {
-                            "$ref": "#/definitions/model.Suggestion"
+                            "$ref": "#/definitions/model.Recommendations"
                         }
                     },
                     "400": {
                         "description": "Invalid payload",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorMessage"
+                            "$ref": "#/definitions/model.ErrResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorMessage"
+                            "$ref": "#/definitions/model.ErrResponse"
                         }
                     }
                 }
@@ -152,13 +221,52 @@ var doc = `{
         }
     },
     "definitions": {
-        "model.ErrorMessage": {
+        "model.ErrResponse": {
             "type": "object",
             "properties": {
                 "code": {
                     "type": "integer"
                 },
                 "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.Item": {
+            "type": "object",
+            "properties": {
+                "item": {
+                    "type": "string"
+                },
+                "score": {
+                    "type": "number"
+                }
+            }
+        },
+        "model.ItemProbability": {
+            "type": "object",
+            "properties": {
+                "item": {
+                    "type": "string"
+                },
+                "propability": {
+                    "type": "number"
+                },
+                "user": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.Items": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Item"
+                    }
+                },
+                "user": {
                     "type": "string"
                 }
             }
@@ -177,7 +285,7 @@ var doc = `{
                 }
             }
         },
-        "model.Suggestion": {
+        "model.Recommendation": {
             "type": "object",
             "properties": {
                 "item": {
@@ -185,6 +293,20 @@ var doc = `{
                 },
                 "score": {
                     "type": "number"
+                }
+            }
+        },
+        "model.Recommendations": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Recommendation"
+                    }
+                },
+                "user": {
+                    "type": "string"
                 }
             }
         }

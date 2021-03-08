@@ -43,6 +43,7 @@ func (a *App) initialiseRoutes() {
 	a.router.HandleFunc("/api/rate", a.rate).Methods(http.MethodPost)
 	a.router.HandleFunc("/api/recommendation/user/{user}", a.recommend).Methods(http.MethodGet)
 	a.router.HandleFunc("/api/items/user/{user}", a.userItems).Methods(http.MethodGet)
+	a.router.HandleFunc("/api/items", a.popularItems).Methods(http.MethodGet)
 	a.router.HandleFunc("/api/probability/user/{user}/item/{item}", a.itemProbability).Methods(http.MethodGet)
 	a.router.PathPrefix("/swagger/").Handler(httpswag.WrapHandler)
 }
@@ -53,8 +54,8 @@ func (a *App) initialiseRoutes() {
 // @Produce json
 // @Param body body model.Rate true "body"
 // @Success 201 {object} model.Rate "Rating created"
-// @Failure 400 {object} model.ErrorMessage "Invalid payload"
-// @Failure 500 {object} model.ErrorMessage "Internal server error"
+// @Failure 400 {object} model.ErrResponse "Invalid payload"
+// @Failure 500 {object} model.ErrResponse "Internal server error"
 // @Router /api/rate [post]
 func (a *App) rate(rw http.ResponseWriter, r *http.Request) {
 	var req m.Rate
@@ -71,22 +72,22 @@ func (a *App) rate(rw http.ResponseWriter, r *http.Request) {
 	respondWithJSON(rw, http.StatusCreated, req)
 }
 
-// @Summary Get suggestions
-// @ID get-suggestions
-// @Description Gets suggestions for a given user
+// @Summary Get recommendations
+// @ID get-recommendations
+// @Description Gets recommendations for a given user
 // @Produce json
 // @Param user path string true "user ID"
-// @Success 200 {object} model.Suggestion "Suggestion returned"
-// @Failure 400 {object} model.ErrorMessage "Invalid payload"
-// @Failure 500 {object} model.ErrorMessage "Internal server error"
-// @Router /api/recommendation/{user} [get]
+// @Success 200 {object} model.Recommendations "Recommendation returned"
+// @Failure 400 {object} model.ErrResponse "Invalid payload"
+// @Failure 500 {object} model.ErrResponse "Internal server error"
+// @Router /api/recommendation/user/{user} [get]
 func (a *App) recommend(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	user := vars["user"]
 	log.WithFields(log.Fields{"User": user}).Info("Received request to retrienve suggestion for user")
 
 	// 1. batch upddate DB
-	if err := a.eng.BatchUpdateSimilarUsers(10000); err != nil {
+	if err := a.eng.BatchUpdateSimilarUsers(-1); err != nil {
 		log.Warnf("failed to update DB with erro %s", err)
 	}
 
@@ -113,10 +114,10 @@ func (a *App) recommend(rw http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param user path string true "user ID"
 // @Param item path string true "item ID"
-// @Success 200 {object} model.Suggestion "Suggestion returned"
-// @Failure 400 {object} model.ErrorMessage "Invalid payload"
-// @Failure 500 {object} model.ErrorMessage "Internal server error"
-// @Router /api/probability/{user}/{item} [get]
+// @Success 200 {object} model.ItemProbability "ItemProbability returned"
+// @Failure 400 {object} model.ErrResponse "Invalid payload"
+// @Failure 500 {object} model.ErrResponse "Internal server error"
+// @Router /api/probability/user/{user}/item/{item} [get]
 func (a *App) itemProbability(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	user := vars["user"]
@@ -139,10 +140,10 @@ func (a *App) itemProbability(rw http.ResponseWriter, r *http.Request) {
 // @Description Gets user items
 // @Produce json
 // @Param user path string true "user ID"
-// @Success 200 {object} model.Suggestion "Suggestion returned"
-// @Failure 400 {object} model.ErrorMessage "Invalid payload"
-// @Failure 500 {object} model.ErrorMessage "Internal server error"
-// @Router /api/iems/user/{user} [get]
+// @Success 200 {object} model.Items "Items returned"
+// @Failure 400 {object} model.ErrResponse "Invalid payload"
+// @Failure 500 {object} model.ErrResponse "Internal server error"
+// @Router /api/items/user/{user} [get]
 func (a *App) userItems(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	user := vars["user"]
@@ -156,7 +157,30 @@ func (a *App) userItems(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Infof("Got results: %v", result)
-	respondWithJSON(rw, http.StatusOK, convertToUserIterms(user, result))
+	respondWithJSON(rw, http.StatusOK, convertToIterms(user, result))
+}
+
+// @Summary Get most popular items
+// @ID get-popular-items
+// @Description Gets the most popular items
+// @Produce json
+// @Success 200 {object} model.Items "Items returned"
+// @Failure 400 {object} model.ErrResponse "Invalid payload"
+// @Failure 500 {object} model.ErrResponse "Internal server error"
+// @Router /api/items [get]
+func (a *App) popularItems(rw http.ResponseWriter, r *http.Request) {
+
+	log.Info("Received request to retrieve the most popular items")
+
+	results, err := a.eng.GetPopularItems(-1)
+
+	if err != nil {
+		respondWithError(rw, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	log.Infof("Got results: %v", results)
+	respondWithJSON(rw, http.StatusOK, convertToIterms("", results))
 }
 
 // respondWithError return json error
@@ -188,18 +212,21 @@ func convertToRecommendations(user string, results []string) m.Recommendations {
 }
 
 // convertToRecommendations convert to an array of Suggestion
-func convertToUserIterms(user string, results []string) m.Items {
+func convertToIterms(user string, results []string) interface{} {
 	var item string
-	recs := []model.Item{}
+	items := []model.Item{}
 	for index, res := range results {
 		if index%2 == 0 {
 			item = res
 		} else {
 			score, _ := strconv.ParseFloat(res, 64)
-			recs = append(recs, m.Item{Name: item, Score: score})
+			items = append(items, m.Item{Name: item, Score: score})
 		}
 	}
-	return m.Items{User: user, Data: recs}
+	if user == "" {
+		return m.PopularItems{Data: items}
+	}
+	return m.Items{User: user, Data: items}
 }
 
 // convertToItemProbability convert an array of result to ItemProbability
