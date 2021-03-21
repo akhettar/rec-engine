@@ -8,7 +8,6 @@ import (
 var err error
 var max = 100
 
-
 func TestRate(t *testing.T) {
 
 	if err = rr.Rate("item1", "user1", 0.4); err != nil {
@@ -30,7 +29,7 @@ func TestRate(t *testing.T) {
 	err = rr.Rate("item7", "user3", 0.66)
 	err = rr.Rate("item8", "user3", 0.66)
 
-	items, err := rr.getUserItems("user2", max)
+	items, err := rr.GetUserItems("user2", max)
 	if err != nil {
 		t.Error("Rate Error", err)
 	}

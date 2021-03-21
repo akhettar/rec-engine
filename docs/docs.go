@@ -32,6 +32,14 @@ var doc = `{
                 ],
                 "summary": "Get most popular items",
                 "operationId": "get-popular-items",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "number of results size",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Items returned",

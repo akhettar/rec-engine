@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	_ "github.com/akhettar/rec-engine/docs"
-	"github.com/akhettar/rec-engine/model"
 	m "github.com/akhettar/rec-engine/model"
 	"github.com/akhettar/rec-engine/redrec"
 	"github.com/gorilla/mux"
@@ -164,6 +163,7 @@ func (a *App) userItems(rw http.ResponseWriter, r *http.Request) {
 // @ID get-popular-items
 // @Description Gets the most popular items
 // @Produce json
+// @Param size query string false "number of results size"
 // @Success 200 {object} model.Items "Items returned"
 // @Failure 400 {object} model.ErrResponse "Invalid payload"
 // @Failure 500 {object} model.ErrResponse "Internal server error"
@@ -171,9 +171,13 @@ func (a *App) userItems(rw http.ResponseWriter, r *http.Request) {
 func (a *App) popularItems(rw http.ResponseWriter, r *http.Request) {
 
 	log.Info("Received request to retrieve the most popular items")
+	resultSize := -1
+	if size, err := strconv.Atoi(r.URL.Query().Get("size")); err == nil {
+		resultSize = size - 1
+	}
 
-	results, err := a.eng.GetPopularItems(-1)
-
+	log.Infof("size got: %d", resultSize)
+	results, err := a.eng.GetPopularItems(resultSize)
 	if err != nil {
 		respondWithError(rw, http.StatusInternalServerError, err.Error())
 		return
@@ -181,56 +185,4 @@ func (a *App) popularItems(rw http.ResponseWriter, r *http.Request) {
 
 	log.Infof("Got results: %v", results)
 	respondWithJSON(rw, http.StatusOK, convertToIterms("", results))
-}
-
-// respondWithError return json error
-func respondWithError(rw http.ResponseWriter, code int, msg string) {
-	respondWithJSON(rw, 400, m.ErrResponse{Error: msg, Code: code})
-}
-
-// respondWithJSON returns json response
-func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
-	json, _ := json.Marshal(payload)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	w.Write(json)
-}
-
-// convertToRecommendations convert to an array of Suggestion
-func convertToRecommendations(user string, results []string) m.Recommendations {
-	var item string
-	recs := []model.Recommendation{}
-	for index, res := range results {
-		if index%2 == 0 {
-			item = res
-		} else {
-			score, _ := strconv.ParseFloat(res, 64)
-			recs = append(recs, m.Recommendation{Item: item, Score: score})
-		}
-	}
-	return m.Recommendations{User: user, Data: recs}
-}
-
-// convertToRecommendations convert to an array of Suggestion
-func convertToIterms(user string, results []string) interface{} {
-	var item string
-	items := []model.Item{}
-	for index, res := range results {
-		if index%2 == 0 {
-			item = res
-		} else {
-			score, _ := strconv.ParseFloat(res, 64)
-			items = append(items, m.Item{Name: item, Score: score})
-		}
-	}
-	if user == "" {
-		return m.PopularItems{Data: items}
-	}
-	return m.Items{User: user, Data: items}
-}
-
-// convertToItemProbability convert an array of result to ItemProbability
-func convertToItemProbability(results []string) m.ItemProbability {
-	propability, _ := strconv.ParseFloat(results[2], 64)
-	return m.ItemProbability{User: results[0], Item: results[1], Probability: propability}
 }

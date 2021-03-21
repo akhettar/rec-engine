@@ -63,6 +63,11 @@ paths:
     get:
       description: Gets the most popular items
       operationId: get-popular-items
+      parameters:
+      - description: number of results size
+        in: query
+        name: size
+        type: string
       produces:
       - application/json
       responses:
