@@ -3,6 +3,7 @@ package redrec
 import (
 	"fmt"
 	"math"
+	"os"
 	"strconv"
 
 	log "github.com/sirupsen/logrus"
@@ -17,7 +18,7 @@ type Redrec struct {
 
 // New returns a new Redrec
 func New(url string) (*Redrec, error) {
-	rconn, err := redis.DialURL(url)
+	rconn, err := redis.DialURL(url, redis.DialUsername(os.Getenv("REDIS_USER")), redis.DialPassword(os.Getenv("REDIS_PWD")))
 	if err != nil {
 		fmt.Println(err.Error())
 		return nil, err
